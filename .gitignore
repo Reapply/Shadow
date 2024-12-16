@@ -1,0 +1,27 @@
+# Ignore Gradle-related files
+.gradle/
+build/
+!build/libs/
+
+# Ignore IntelliJ IDEA project files
+.idea/
+*.iml
+
+# Ignore Gradle wrapper files
+gradle/wrapper/gradle-wrapper.jar
+
+# Ignore log files and temporary files
+*.log
+*.tmp
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore Kotlin-specific files
+*.class
+*.kt.*
+*.kotlin_module
+
+# Ignore other temporary files
+*.lock
