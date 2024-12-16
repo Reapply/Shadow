@@ -41,13 +41,6 @@ Each pad features:
 - Kotlin 2.1.0
 - BungeeCord/Velocity for server teleportation
 
-## Installation
-
-1. Download the latest release JAR
-2. Place it in your server's `plugins` folder
-3. Start/restart your server
-4. Configure the plugin in `plugins/Shadow/config.yml`
-
 ## Configuration
 
 The plugin uses several configuration files:
