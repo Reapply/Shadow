@@ -31,7 +31,6 @@ class Shadow : JavaPlugin() {
 
         // Initialize Twilight
         twilight(this) {
-            // Add any Twilight configuration here if needed
         }
 
         // Initialize features
@@ -101,7 +100,5 @@ class Shadow : JavaPlugin() {
 
         // Give selector item
         ServerSelector.giveSelectorItem(player)
-
-        // Note: Welcome message is handled by PlayerListener
     }
 }
