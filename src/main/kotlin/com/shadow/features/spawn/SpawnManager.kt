@@ -79,6 +79,12 @@ object SpawnManager {
         }
     }
 
+    fun teleportToSpawn(player: Player) {
+        spawnLocation?.let { spawn ->
+            player.teleport(spawn)
+        }
+    }
+
     fun setSpawn(location: Location) {
         spawnLocation = location
         saveSpawn()

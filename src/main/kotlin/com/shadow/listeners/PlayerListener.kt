@@ -1,6 +1,7 @@
 package com.shadow.listeners
 
 import com.shadow.Shadow
+import com.shadow.features.spawn.SpawnManager
 import gg.flyte.twilight.event.event
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.TextColor
@@ -42,6 +43,11 @@ class PlayerListener : Listener {
 
             // Set player state
             Shadow.instance.setPlayerHubState(player)
+
+            // teleport player to spawn with delay
+            Shadow.instance.server.scheduler.runTaskLater(Shadow.instance, Runnable {
+                SpawnManager.teleportToSpawn(player)
+            }, 20L) // 1 second delay
 
             // Send welcome message
             createWelcomeMessage().forEach { message ->

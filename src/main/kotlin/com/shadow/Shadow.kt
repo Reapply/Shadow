@@ -9,6 +9,7 @@ import gg.flyte.twilight.twilight
 import org.bukkit.GameMode
 import org.bukkit.GameRule
 import org.bukkit.Sound
+import org.bukkit.WeatherType
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.plugin.java.JavaPlugin
@@ -91,6 +92,7 @@ class Shadow : JavaPlugin() {
         player.exp = 0f
         player.level = 0
         player.inventory.clear()
+        player.setPlayerWeather(WeatherType.DOWNFALL)
         player.activePotionEffects.clear()
 
         // Teleport to spawn if available
