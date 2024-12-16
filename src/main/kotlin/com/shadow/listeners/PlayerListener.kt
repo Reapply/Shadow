@@ -27,6 +27,8 @@ class PlayerListener : Listener {
             Component.text()
                 .append(Component.text("━".repeat(30))
                     .color(lightPink))
+                // strike through
+                .decoration(TextDecoration.STRIKETHROUGH, true)
                 .build(),
             Component.empty()
         )
