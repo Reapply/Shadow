@@ -1,0 +1,15 @@
+name: Shadow
+version: '1.0'
+main: com.shadow.Shadow
+api-version: '1.21'
+authors: [ Banker ]
+commands:
+  setspawn:
+    description: Sets the spawn location
+    usage: /setspawn
+    permission: sakura.setspawn
+
+permissions:
+  sakura.setspawn:
+    description: Allows setting the spawn location
+    default: op
