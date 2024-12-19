@@ -5,11 +5,27 @@ api-version: '1.21'
 authors: [ Banker ]
 commands:
   setspawn:
-    description: Sets the spawn location
+    description: Set the spawn location
     usage: /setspawn
-    permission: sakura.setspawn
+
+  queue:
+    description: Queue management command
+    usage: |
+      /queue join <server> - Join a server queue
+      /queue leave - Leave current queue
+      /queue control <disable|enable> <server> - Control queues
+    aliases: [q]
+
+  fireplace:
+    description: Manage spiral fireplace effects
+    usage: /fireplace <add|remove>
+    permission: sakura.fireplace
 
 permissions:
   sakura.setspawn:
     description: Allows setting the spawn location
+    default: op
+
+  sakura.queue.admin:
+    description: Allows controlling server queues
     default: op

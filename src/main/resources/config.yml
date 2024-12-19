@@ -1,47 +1,61 @@
 # Sakura PvP Configuration
-
 # Server Selector Configuration
 selector:
   material: COMPASS
   name: "<dark_purple>Server Selector"
   slot: 4
-
 gui:
   title: "<dark_purple>Sakura Network"
   size: 27
   use-background: true
   background-material: BLACK_STAINED_GLASS_PANE
-
 servers:
-  practice:
-    display-name: "<dark_purple>Practice"
-    material: DIAMOND_SWORD
-    slot: 11
-    server-id: "practice"  # BungeeCord server ID
-    description:
-      - "<white>Practice your PvP skills"
-      - "<white>with custom kits and arenas"
-      - ""
-      - "<dark_purple>» Click to join!"
-
-  ffa:
-    display-name: "<dark_purple>FFA"
-    material: NETHERITE_SWORD
-    slot: 13
-    server-id: "ffa"  # BungeeCord server ID
-    description:
-      - "<white>Jump into instant PvP action"
-      - "<white>in various themed arenas"
-      - ""
-      - "<dark_purple>» Click to join!"
-
   duels:
     display-name: "<dark_purple>Duels"
-    material: GOLDEN_SWORD
-    slot: 15
+    material: ORANGE_CONCRETE
+    slot: 11
     server-id: "duels"  # BungeeCord server ID
+    enabled: true  # Queue status persistence
     description:
       - "<white>1v1 battles with custom"
       - "<white>kits and ranked matches"
       - ""
-      - "<dark_purple>» Click to join!"
+      - "<gray>Queue Status: <green>Open"
+      - ""
+      - "<dark_purple>» Click to join queue!"
+  pit:
+    display-name: "<dark_purple>Pit"
+    material: PINK_CONCRETE
+    slot: 13
+    server-id: "pit"  # BungeeCord server ID
+    enabled: true  # Queue status persistence
+    description:
+      - "<white>Join the chaotic arena"
+      - "<white>and fight for supremacy"
+      - ""
+      - "<gray>Queue Status: <green>Open"
+      - ""
+      - "<dark_purple>» Click to join queue!"
+  ffa:
+    display-name: "<dark_purple>FFA"
+    material: CYAN_CONCRETE
+    slot: 15
+    server-id: "ffa"  # BungeeCord server ID
+    enabled: true  # Queue status persistence
+    description:
+      - "<white>Jump into instant PvP action"
+      - "<white>in various themed arenas"
+      - ""
+      - "<gray>Queue Status: <green>Open"
+      - ""
+      - "<dark_purple>» Click to join queue!"
+# Queue Configuration
+queue:
+  process-interval: 20
+  messages:
+    joined: "<dark_purple>You joined the queue for %server%!"
+    left: "<dark_purple>You left the queue!"
+    disabled: "<dark_purple>This queue is currently disabled!"
+    locked: "<dark_purple>This queue is currently locked!"
+  action-bar:
+    format: "<dark_purple>In Queue: %server% | Position: %position%/%total% | Time: %time%"
