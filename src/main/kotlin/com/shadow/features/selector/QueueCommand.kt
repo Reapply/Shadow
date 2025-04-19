@@ -1,19 +1,21 @@
 package com.shadow.features.selector
 
+import com.shadow.config.ConfigManager
 import com.shadow.domain.QueueResult
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.TextColor
+import com.shadow.utils.ShadowUtils
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 import org.bukkit.command.TabCompleter
 import org.bukkit.entity.Player
 
+/**
+ * Command to manage the server queue system
+ */
 class QueueCommand : CommandExecutor {
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<out String>): Boolean {
         if (sender !is Player && args.getOrNull(0) != "control") {
-            sender.sendMessage(Component.text("This command can only be used by players!")
-                .color(TextColor.color(0xFF69B4)))
+            sender.sendMessage(ShadowUtils.parseMessage("<red>This command can only be used by players!"))
             return true
         }
 
@@ -27,13 +29,15 @@ class QueueCommand : CommandExecutor {
         return true
     }
 
+    /**
+     * Handle the join queue command
+     */
     private fun handleJoinCommand(sender: CommandSender, args: Array<out String>) {
         if (sender !is Player) return
 
         val serverId = args.getOrNull(1)
         if (serverId == null) {
-            sender.sendMessage(Component.text("Usage: /queue join <server>")
-                .color(TextColor.color(0xFF69B4)))
+            sender.sendMessage(ShadowUtils.parseMessage("<red>Usage: /queue join <server>"))
             return
         }
 
@@ -42,31 +46,33 @@ class QueueCommand : CommandExecutor {
                 // Message is sent in addToQueue
             }
             is QueueResult.Error -> {
-                sender.sendMessage(Component.text(result.message)
-                    .color(TextColor.color(0xFF69B4)))
+                sender.sendMessage(ShadowUtils.parseMessage("<red>${result.message}"))
             }
             QueueResult.Disabled -> {
                 // Message is sent in addToQueue
             }
             QueueResult.AlreadyInQueue -> {
-                sender.sendMessage(Component.text("You are already in this queue!")
-                    .color(TextColor.color(0xFF69B4)))
+                sender.sendMessage(ShadowUtils.parseMessage("<red>You are already in this queue!"))
             }
         }
     }
 
+    /**
+     * Handle the leave queue command
+     */
     private fun handleLeaveCommand(sender: CommandSender) {
         if (sender !is Player) return
 
         ServerSelector.removeFromAllQueues(sender)
-        sender.sendMessage(Component.text("You left all queues!")
-            .color(TextColor.color(0xFF69B4)))
+        sender.sendMessage(ShadowUtils.parseMessage("<green>You left all queues!"))
     }
 
+    /**
+     * Handle the queue control commands (admin only)
+     */
     private fun handleControlCommand(sender: CommandSender, args: Array<out String>) {
         if (!sender.hasPermission("sakura.queue.admin")) {
-            sender.sendMessage(Component.text("You don't have permission to control queues!")
-                .color(TextColor.color(0xFF69B4)))
+            sender.sendMessage(ShadowUtils.parseMessage("<red>You don't have permission to control queues!"))
             return
         }
 
@@ -74,60 +80,66 @@ class QueueCommand : CommandExecutor {
             "disable" -> handleQueueDisable(sender, args)
             "enable" -> handleQueueEnable(sender, args)
             else -> {
-                sender.sendMessage(Component.text("Usage: /queue control <disable|enable> <server>")
-                    .color(TextColor.color(0xFF69B4)))
+                sender.sendMessage(ShadowUtils.parseMessage("<red>Usage: /queue control <disable|enable> <server>"))
             }
         }
     }
 
+    /**
+     * Handle disabling a server queue
+     */
     private fun handleQueueDisable(sender: CommandSender, args: Array<out String>) {
         val serverId = args.getOrNull(2)
         if (serverId == null) {
-            sender.sendMessage(Component.text("Usage: /queue control disable <server>")
-                .color(TextColor.color(0xFF69B4)))
+            sender.sendMessage(ShadowUtils.parseMessage("<red>Usage: /queue control disable <server>"))
             return
         }
 
         ServerSelector.disableQueue(serverId)
-        sender.sendMessage(Component.text("Queue for $serverId has been disabled!")
-            .color(TextColor.color(0xFF69B4)))
+        sender.sendMessage(ShadowUtils.parseMessage("<green>Queue for $serverId has been disabled!"))
     }
 
+    /**
+     * Handle enabling a server queue
+     */
     private fun handleQueueEnable(sender: CommandSender, args: Array<out String>) {
         val serverId = args.getOrNull(2)
         if (serverId == null) {
-            sender.sendMessage(Component.text("Usage: /queue control enable <server>")
-                .color(TextColor.color(0xFF69B4)))
+            sender.sendMessage(ShadowUtils.parseMessage("<red>Usage: /queue control enable <server>"))
             return
         }
 
         ServerSelector.enableQueue(serverId)
-        sender.sendMessage(Component.text("Queue for $serverId has been enabled!")
-            .color(TextColor.color(0xFF69B4)))
+        sender.sendMessage(ShadowUtils.parseMessage("<green>Queue for $serverId has been enabled!"))
     }
 
+    /**
+     * Send command usage information
+     */
     private fun sendUsage(sender: CommandSender) {
         val baseCommands = listOf(
-            "Usage: /queue <join|leave>",
-            "  join <server> - Join a server queue",
-            "  leave - Leave current queue"
+            "<yellow>Usage: /queue <join|leave>",
+            "<gray>  join <server> - Join a server queue",
+            "<gray>  leave - Leave current queue"
         )
 
         val adminCommands = if (sender.hasPermission("sakura.queue.admin")) {
             listOf(
-                "Admin Commands:",
-                "  control disable <server> - Disable a queue",
-                "  control enable <server> - Enable a queue"
+                "<yellow>Admin Commands:",
+                "<gray>  control disable <server> - Disable a queue",
+                "<gray>  control enable <server> - Enable a queue"
             )
         } else emptyList()
 
         (baseCommands + adminCommands).forEach { line ->
-            sender.sendMessage(Component.text(line)
-                .color(TextColor.color(0xFF69B4)))
+            sender.sendMessage(ShadowUtils.parseMessage(line))
         }
     }
 }
 
+/**
+ * Tab completer for the queue command
+ */
 class QueueTabCompleter : TabCompleter {
     override fun onTabComplete(
         sender: CommandSender,
@@ -154,7 +166,7 @@ class QueueTabCompleter : TabCompleter {
         firstArg: String,
         current: String
     ): List<String> = when (firstArg.lowercase()) {
-        "join" -> ServerSelector.serverList.map { it.id }
+        "join" -> ConfigManager.serverList.map { it.id }
         "control" -> if (sender.hasPermission("sakura.queue.admin")) {
             listOf("disable", "enable")
         } else emptyList()
@@ -169,7 +181,7 @@ class QueueTabCompleter : TabCompleter {
     ): List<String> = when {
         firstArg.equals("control", ignoreCase = true) &&
                 sender.hasPermission("sakura.queue.admin") -> {
-            ServerSelector.serverList.map { it.id }
+            ConfigManager.serverList.map { it.id }
                 .filter { it.startsWith(current.lowercase()) }
         }
         else -> emptyList()

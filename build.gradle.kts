@@ -20,7 +20,6 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-    implementation("gg.flyte:twilight:1.1.16")
 }
 
 val targetJavaVersion = 21

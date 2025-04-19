@@ -1,15 +1,16 @@
 package com.shadow.features.selector
 
 import com.shadow.Shadow
-import com.shadow.domain.*
-import gg.flyte.twilight.builders.item.ItemBuilder
-import gg.flyte.twilight.event.event
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.TextColor
-import net.kyori.adventure.text.minimessage.MiniMessage
+import com.shadow.config.ConfigManager
+import com.shadow.domain.QueueResult
+import com.shadow.domain.ServerInfo
+import com.shadow.utils.SafeItemBuilder
+import com.shadow.utils.ShadowUtils
 import org.bukkit.*
-import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import org.bukkit.event.block.Action
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractEvent
@@ -18,8 +19,6 @@ import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.ItemStack
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
-import java.io.File
-import java.io.IOException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
@@ -28,34 +27,10 @@ import java.util.concurrent.LinkedBlockingQueue
  * Manages server selection and queuing functionality for a multi-server network.
  * Provides a GUI-based server selector and handles queue management for server transfers.
  */
-object ServerSelector {
-    private val mm = MiniMessage.miniMessage()
-
-    // Configuration objects loaded from config.yml
-    private val config: YamlConfiguration by lazy {
-        YamlConfiguration.loadConfiguration(File(Shadow.instance.dataFolder, "config.yml"))
-    }
-
-    private val selectorConfig: SelectorConfig by lazy {
-        SelectorConfig.fromConfig(config)
-    }
-
-    private val queueConfig: QueueConfig by lazy {
-        QueueConfig.fromConfig(config)
-    }
-
-    // List of available servers and their configurations
-    val serverList: List<ServerInfo> by lazy {
-        buildList {
-            config.getConfigurationSection("servers")?.getKeys(false)?.forEach { key ->
-                add(ServerInfo.fromConfig(key, config))
-            }
-        }
-    }
-
+object ServerSelector : Listener {
     // Queue management
     private val queues: Map<String, LinkedBlockingQueue<UUID>> by lazy {
-        serverList.associate { it.id to LinkedBlockingQueue<UUID>() }
+        ConfigManager.serverList.associate { it.id to LinkedBlockingQueue<UUID>() }
     }
 
     // Tracks how long players have been in queues
@@ -65,7 +40,20 @@ object ServerSelector {
     private val disabledQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     private val selectorItem by lazy {
-        createSelectorItem()
+        try {
+            createSelectorItem()
+        } catch (e: Exception) {
+            Shadow.instance.logger.severe("Failed to create selector item: ${e.message}")
+            e.printStackTrace()
+
+            // Fallback to a simple item
+            SafeItemBuilder(
+                material = Material.COMPASS,
+                name = ShadowUtils.parseMessage("<dark_purple>Server Selector")
+            ).apply {
+                customModelData = 1001
+            }
+        }
     }
 
     /**
@@ -74,7 +62,7 @@ object ServerSelector {
      */
     fun init(plugin: Shadow) {
         loadDisabledQueues()
-        registerEvents()
+        plugin.server.pluginManager.registerEvents(this, plugin)
         startQueueProcessor(plugin)
 
         plugin.getCommand("queue")?.setExecutor(QueueCommand())
@@ -85,8 +73,8 @@ object ServerSelector {
      * Loads the initial state of disabled queues from configuration
      */
     private fun loadDisabledQueues() {
-        serverList.forEach { server ->
-            if (!config.getBoolean("servers.${server.id}.enabled", true)) {
+        ConfigManager.serverList.forEach { server ->
+            if (!Shadow.instance.config.getBoolean("servers.${server.id}.enabled", true)) {
                 disabledQueues.add(server.id)
             }
         }
@@ -95,31 +83,54 @@ object ServerSelector {
     /**
      * Creates the item used to open the server selector GUI
      */
-    private fun createSelectorItem(): ItemBuilder =
-        ItemBuilder(
-            Material.valueOf(selectorConfig.material),
-            name = mm.deserialize(selectorConfig.name)
-        ).apply {
-            customModelData = 1001
+    private fun createSelectorItem(): SafeItemBuilder {
+        try {
+            // Get the material safely
+            val materialName = ConfigManager.selectorConfig.material.uppercase()
+            val material = try {
+                Material.valueOf(materialName)
+            } catch (e: Exception) {
+                Shadow.instance.logger.warning("Invalid material name: $materialName, using COMPASS instead")
+                Material.COMPASS
+            }
+
+            return SafeItemBuilder(
+                material = material,
+                name = ShadowUtils.parseMessage(ConfigManager.selectorConfig.name)
+            ).apply {
+                customModelData = 1001
+            }
+        } catch (e: Exception) {
+            Shadow.instance.logger.severe("Error in createSelectorItem: ${e.message}")
+            e.printStackTrace()
+            throw e
         }
+    }
 
     /**
      * Creates an ItemStack representing a server in the selector GUI
      * Includes server name, description, and current queue status
      */
     private fun createServerItem(server: ServerInfo): ItemStack {
-        val description = config.getStringList("servers.${server.id}.description").toMutableList()
+        val description = Shadow.instance.config.getStringList("servers.${server.id}.description").toMutableList()
         val statusIndex = description.indexOfFirst { it.contains("Queue Status") }
 
         if (statusIndex != -1) {
             description[statusIndex] = "<gray>Queue Status: ${getQueueStatus(server.id)}"
         }
 
-        return ItemBuilder(
-            Material.valueOf(server.material),
-            name = mm.deserialize(server.displayName)
+        val material = try {
+            Material.valueOf(server.material.uppercase())
+        } catch (e: Exception) {
+            Shadow.instance.logger.warning("Invalid material for server ${server.id}: ${server.material}. Using STONE instead.")
+            Material.STONE
+        }
+
+        return SafeItemBuilder(
+            material = material,
+            name = ShadowUtils.parseMessage(server.displayName)
         ).apply {
-            lore = description.map { mm.deserialize(it) }.toMutableList()
+            setLore(description.map { ShadowUtils.parseMessage(it) }.toMutableList())
         }.build()
     }
 
@@ -130,35 +141,14 @@ object ServerSelector {
         if (disabledQueues.contains(serverId)) "<red>Disabled" else "<green>Open"
 
     /**
-     * Updates the queue status in the configuration file and saves changes
-     */
-    private fun updateQueueStatusInConfig(serverId: String, enabled: Boolean) {
-        config.set("servers.$serverId.enabled", enabled)
-
-        config.getStringList("servers.$serverId.description").toMutableList().let { description ->
-            val statusIndex = description.indexOfFirst { it.contains("Queue Status") }
-            if (statusIndex != -1) {
-                description[statusIndex] = "<gray>Queue Status: ${if (enabled) "<green>Open" else "<red>Disabled"}"
-                config.set("servers.$serverId.description", description)
-            }
-        }
-
-        try {
-            config.save(File(Shadow.instance.dataFolder, "config.yml"))
-        } catch (e: IOException) {
-            Shadow.instance.logger.warning("Failed to save queue status: ${e.message}")
-        }
-    }
-
-    /**
      * Updates all open server selector GUIs to reflect current queue statuses
      */
     fun updateAllSelectors() {
         Bukkit.getOnlinePlayers()
-            .filter { it.openInventory.title() == mm.deserialize(selectorConfig.guiTitle) }
+            .filter { it.openInventory.title() == ShadowUtils.parseMessage(ConfigManager.selectorConfig.guiTitle) }
             .forEach { player ->
                 val inventory = player.openInventory.topInventory
-                serverList.forEach { server ->
+                ConfigManager.serverList.forEach { server ->
                     inventory.setItem(server.slot, createServerItem(server))
                 }
             }
@@ -170,24 +160,30 @@ object ServerSelector {
     fun openSelector(player: Player) {
         val inventory = Bukkit.createInventory(
             null,
-            selectorConfig.guiSize,
-            mm.deserialize(selectorConfig.guiTitle)
+            ConfigManager.selectorConfig.guiSize,
+            ShadowUtils.parseMessage(ConfigManager.selectorConfig.guiTitle)
         )
 
         // Fill background if enabled
-        if (selectorConfig.useBackground) {
-            val bgItem = ItemBuilder(
-                Material.valueOf(selectorConfig.backgroundMaterial),
-                name = mm.deserialize(" ")
+        if (ConfigManager.selectorConfig.useBackground) {
+            val bgMaterial = try {
+                Material.valueOf(ConfigManager.selectorConfig.backgroundMaterial)
+            } catch (e: Exception) {
+                Material.BLACK_STAINED_GLASS_PANE
+            }
+
+            val bgItem = SafeItemBuilder(
+                material = bgMaterial,
+                name = ShadowUtils.parseMessage(" ")
             ).build()
 
-            for (i in 0 until selectorConfig.guiSize) {
+            for (i in 0 until ConfigManager.selectorConfig.guiSize) {
                 inventory.setItem(i, bgItem)
             }
         }
 
         // Add server items
-        serverList.forEach { server ->
+        ConfigManager.serverList.forEach { server ->
             inventory.setItem(server.slot, createServerItem(server))
         }
 
@@ -201,7 +197,7 @@ object ServerSelector {
      */
     fun addToQueue(player: Player, serverId: String): QueueResult {
         if (disabledQueues.contains(serverId)) {
-            player.sendMessage(mm.deserialize(queueConfig.messages.disabled))
+            ShadowUtils.sendMessage(player, ConfigManager.queueConfig.messages.disabled)
             return QueueResult.Disabled
         }
 
@@ -216,11 +212,12 @@ object ServerSelector {
         queue.offer(player.uniqueId)
         queueTimes[player.uniqueId] = System.currentTimeMillis()
 
-        val server = serverList.find { it.id == serverId }
-        player.sendMessage(mm.deserialize(
-            queueConfig.messages.joined.replace("%server%", server?.displayName ?: serverId)
-        ))
-        player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1f)
+        val server = ConfigManager.serverList.find { it.id == serverId }
+        ShadowUtils.sendMessage(
+            player,
+            ConfigManager.queueConfig.messages.joined.replace("%server%", server?.displayName ?: serverId)
+        )
+        ShadowUtils.playSound(player, Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1f)
 
         return QueueResult.Success(queue.size)
     }
@@ -249,21 +246,23 @@ object ServerSelector {
     }
 
     /**
-     * Formats milliseconds into a human-readable duration string
-     */
-    private fun formatTime(ms: Long): String {
-        val seconds = ms / 1000
-        return when {
-            seconds < 60 -> "${seconds}s"
-            else -> "${seconds / 60}m ${seconds % 60}s"
-        }
-    }
-
-    /**
      * Gives the selector item to a player
      */
     fun giveSelectorItem(player: Player) {
-        player.inventory.setItem(selectorConfig.slot, selectorItem.build())
+        try {
+            player.inventory.setItem(ConfigManager.selectorConfig.slot, selectorItem.build())
+        } catch (e: Exception) {
+            Shadow.instance.logger.severe("Failed to give selector item: ${e.message}")
+            // Fallback to a simple item if the builder fails
+            val item = ItemStack(Material.COMPASS)
+            val meta = item.itemMeta
+            if (meta != null) {
+                meta.displayName(ShadowUtils.parseMessage("<dark_purple>Server Selector"))
+                meta.setCustomModelData(1001)
+                item.itemMeta = meta
+            }
+            player.inventory.setItem(ConfigManager.selectorConfig.slot, item)
+        }
     }
 
     /**
@@ -303,15 +302,12 @@ object ServerSelector {
                 getPlayerQueue(player)?.let { (serverId, position) ->
                     val timeInQueue = System.currentTimeMillis() - (queueTimes[player.uniqueId] ?: System.currentTimeMillis())
                     val queueSize = queues[serverId]?.size ?: 0
+                    val serverName = ConfigManager.serverList.find { it.id == serverId }?.displayName ?: serverId
 
                     player.sendActionBar(
-                        Component.text()
-                            .append(Component.text("In Queue: "))
-                            .append(Component.text(serverList.find { it.id == serverId }?.displayName ?: serverId))
-                            .append(Component.text(" | Position: $position/$queueSize"))
-                            .append(Component.text(" | Time: ${formatTime(timeInQueue)}"))
-                            .color(TextColor.color(0xFF69B4))
-                            .build()
+                        ShadowUtils.parseMessage(
+                            "<pink>In Queue: $serverName | Position: $position/$queueSize | Time: ${ShadowUtils.formatTime(timeInQueue)}</pink>"
+                        )
                     )
                 }
             }
@@ -319,53 +315,63 @@ object ServerSelector {
     }
 
     /**
-     * Registers all event handlers for the server selector system
+     * Give selector item on join
      */
-    private fun registerEvents() {
-        // Give selector item on join
-        event<PlayerJoinEvent> {
-            giveSelectorItem(player)
-        }
+    @EventHandler
+    fun onPlayerJoin(event: PlayerJoinEvent) {
+        giveSelectorItem(event.player)
+    }
 
-        // Prevent dropping selector item
-        event<PlayerDropItemEvent> {
-            if (itemDrop.itemStack.itemMeta?.hasCustomModelData() == true &&
-                itemDrop.itemStack.itemMeta?.customModelData == 1001) {
-                isCancelled = true
+    /**
+     * Prevent dropping selector item
+     */
+    @EventHandler
+    fun onItemDrop(event: PlayerDropItemEvent) {
+        val meta = event.itemDrop.itemStack.itemMeta
+        if (meta?.hasCustomModelData() == true && meta.customModelData == 1001) {
+            event.isCancelled = true
+        }
+    }
+
+    /**
+     * Handle right-click to open selector
+     */
+    @EventHandler
+    fun onPlayerInteract(event: PlayerInteractEvent) {
+        if (event.action == Action.RIGHT_CLICK_AIR ||
+            event.action == Action.RIGHT_CLICK_BLOCK) {
+            val meta = event.item?.itemMeta
+            if (meta?.hasCustomModelData() == true && meta.customModelData == 1001) {
+                event.isCancelled = true
+                openSelector(event.player)
             }
         }
+    }
 
-        // Handle right-click to open selector
-        event<PlayerInteractEvent> {
-            if (action == org.bukkit.event.block.Action.RIGHT_CLICK_AIR ||
-                action == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) {
-                if (item?.itemMeta?.hasCustomModelData() == true &&
-                    item?.itemMeta?.customModelData == 1001) {
-                    isCancelled = true
-                    openSelector(player)
-                }
+    /**
+     * Handle clicks in selector GUI
+     */
+    @EventHandler
+    fun onInventoryClick(event: InventoryClickEvent) {
+        if (event.view.title() == ShadowUtils.parseMessage(ConfigManager.selectorConfig.guiTitle)) {
+            event.isCancelled = true
+
+            if (event.whoClicked !is Player) return
+            val player = event.whoClicked as Player
+
+            ConfigManager.serverList.find { it.slot == event.slot }?.let { server ->
+                player.closeInventory()
+                addToQueue(player, server.id)
             }
         }
+    }
 
-        // Handle clicks in selector GUI
-        event<InventoryClickEvent> {
-            if (view.title() == mm.deserialize(selectorConfig.guiTitle)) {
-                isCancelled = true
-
-                if (whoClicked !is Player) return@event
-                val player = whoClicked as Player
-
-                serverList.find { it.slot == slot }?.let { server ->
-                    player.closeInventory()
-                    addToQueue(player, server.id)
-                }
-            }
-        }
-
-        // Remove from queues on disconnect
-        event<PlayerQuitEvent> {
-            removeFromAllQueues(player)
-        }
+    /**
+     * Remove from queues on disconnect
+     */
+    @EventHandler
+    fun onPlayerQuit(event: PlayerQuitEvent) {
+        removeFromAllQueues(event.player)
     }
 
     /**
@@ -373,7 +379,7 @@ object ServerSelector {
      */
     fun disableQueue(serverId: String) {
         disabledQueues.add(serverId)
-        updateQueueStatusInConfig(serverId, false)
+        ConfigManager.updateQueueStatus(serverId, false)
         updateAllSelectors()
     }
 
@@ -382,7 +388,7 @@ object ServerSelector {
      */
     fun enableQueue(serverId: String) {
         disabledQueues.remove(serverId)
-        updateQueueStatusInConfig(serverId, true)
+        ConfigManager.updateQueueStatus(serverId, true)
         updateAllSelectors()
     }
 }

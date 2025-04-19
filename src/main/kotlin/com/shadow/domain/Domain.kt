@@ -1,5 +1,6 @@
 package com.shadow.domain
 
+import org.bukkit.Material
 import org.bukkit.configuration.file.YamlConfiguration
 
 data class ServerInfo(
@@ -39,6 +40,26 @@ data class SelectorConfig(
     val useBackground: Boolean = true,
     val backgroundMaterial: String = "BLACK_STAINED_GLASS_PANE"
 ) {
+    // Added validation to ensure valid GUI size
+    init {
+        require(guiSize % 9 == 0 && guiSize <= 54) { "GUI size must be a multiple of 9 and less than or equal to 54" }
+        require(slot in 0..8) { "Selector slot must be between 0 and 8" }
+    }
+
+    // Added helper function to get Material enum from string
+    fun getSelectorMaterial(): Material = try {
+        Material.valueOf(material)
+    } catch (e: IllegalArgumentException) {
+        Material.COMPASS
+    }
+
+    // Added helper function for background material
+    fun getBackgroundMaterial(): Material = try {
+        Material.valueOf(backgroundMaterial)
+    } catch (e: IllegalArgumentException) {
+        Material.BLACK_STAINED_GLASS_PANE
+    }
+
     companion object {
         fun fromConfig(config: YamlConfiguration): SelectorConfig =
             SelectorConfig(
@@ -88,4 +109,12 @@ sealed class QueueResult {
     data class Error(val message: String) : QueueResult()
     object Disabled : QueueResult()
     object AlreadyInQueue : QueueResult()
+
+    // Helper function to get appropriate message for each result type
+    fun getMessage(config: QueueConfig, serverName: String = ""): String = when (this) {
+        is Success -> config.messages.joined.replace("%server%", serverName)
+        is Error -> message
+        is Disabled -> config.messages.disabled
+        is AlreadyInQueue -> "You are already in the queue for $serverName"
+    }
 }

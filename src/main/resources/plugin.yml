@@ -16,10 +16,10 @@ commands:
       /queue control <disable|enable> <server> - Control queues
     aliases: [q]
 
-  fireplace:
-    description: Manage spiral fireplace effects
-    usage: /fireplace <add|remove>
-    permission: sakura.fireplace
+  absidien:
+    description: Admin commands for the Absidien plugin
+    usage: /absidien reload
+    aliases: [abs]
 
 permissions:
   sakura.setspawn:

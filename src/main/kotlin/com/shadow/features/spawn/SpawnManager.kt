@@ -1,115 +1,89 @@
 package com.shadow.features.spawn
 
 import com.shadow.Shadow
-import gg.flyte.twilight.event.event
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.TextColor
-import org.bukkit.Bukkit
+import com.shadow.config.ConfigManager
+import com.shadow.utils.ShadowUtils
 import org.bukkit.Location
+import org.bukkit.Sound
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
-import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerRespawnEvent
-import java.io.File
 
-object SpawnManager {
-    private lateinit var spawnConfig: YamlConfiguration
-    private lateinit var spawnFile: File
-    private var spawnLocation: Location? = null
-
+/**
+ * Manages the server spawn location and related functionality
+ */
+object SpawnManager : Listener {
+    /**
+     * Initialize the spawn manager
+     */
     fun init(plugin: Shadow) {
-        // Initialize config
-        spawnFile = File(plugin.dataFolder, "spawn.yml")
-        if (!spawnFile.exists()) {
-            spawnFile.createNewFile()
-        }
-        spawnConfig = YamlConfiguration.loadConfiguration(spawnFile)
-
-        // Load spawn location
-        loadSpawn()
-
         // Register events
-        registerEvents()
+        plugin.server.pluginManager.registerEvents(this, plugin)
 
         // Register command
         plugin.getCommand("setspawn")?.setExecutor(SetSpawnCommand())
     }
 
-    private fun loadSpawn() {
-        if (spawnConfig.contains("spawn")) {
-            val world = Bukkit.getWorld(spawnConfig.getString("spawn.world")!!)
-            val x = spawnConfig.getDouble("spawn.x")
-            val y = spawnConfig.getDouble("spawn.y")
-            val z = spawnConfig.getDouble("spawn.z")
-            val yaw = spawnConfig.getDouble("spawn.yaw").toFloat()
-            val pitch = spawnConfig.getDouble("spawn.pitch").toFloat()
-
-            spawnLocation = Location(world, x, y, z, yaw, pitch)
+    /**
+     * Teleport to spawn on join
+     */
+    @EventHandler
+    fun onPlayerJoin(event: PlayerJoinEvent) {
+        ConfigManager.getSpawnLocation()?.let { spawn ->
+            event.player.teleport(spawn)
         }
     }
 
-    private fun saveSpawn() {
-        spawnLocation?.let { loc ->
-            spawnConfig.set("spawn.world", loc.world?.name)
-            spawnConfig.set("spawn.x", loc.x)
-            spawnConfig.set("spawn.y", loc.y)
-            spawnConfig.set("spawn.z", loc.z)
-            spawnConfig.set("spawn.yaw", loc.yaw)
-            spawnConfig.set("spawn.pitch", loc.pitch)
-            spawnConfig.save(spawnFile)
+    /**
+     * Teleport to spawn on respawn
+     */
+    @EventHandler
+    fun onPlayerRespawn(event: PlayerRespawnEvent) {
+        ConfigManager.getSpawnLocation()?.let { spawn ->
+            event.player.teleport(spawn)
         }
     }
 
-    private fun registerEvents() {
-        // Teleport to spawn on join
-        event<PlayerJoinEvent> {
-            spawnLocation?.let { spawn ->
-                player.teleport(spawn)
-            }
-        }
-
-        // Teleport to spawn on respawn
-        event<PlayerRespawnEvent> {
-            spawnLocation?.let { spawn ->
-                player.teleport(spawn)
-            }
-        }
-    }
-
+    /**
+     * Teleport a player to spawn
+     */
     fun teleportToSpawn(player: Player) {
-        spawnLocation?.let { spawn ->
+        ConfigManager.getSpawnLocation()?.let { spawn ->
             player.teleport(spawn)
         }
     }
 
+    /**
+     * Set the spawn location
+     */
     fun setSpawn(location: Location) {
-        spawnLocation = location
-        saveSpawn()
+        ConfigManager.saveSpawn(location)
     }
-
-    fun getSpawn(): Location? = spawnLocation
 }
 
+/**
+ * Command to set the server spawn location
+ */
 class SetSpawnCommand : CommandExecutor {
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<out String>): Boolean {
         if (sender !is Player) {
-            sender.sendMessage(Component.text("Only players can use this command!")
-                .color(TextColor.color(0xFF69B4)))
+            sender.sendMessage(ShadowUtils.parseMessage("<red>Only players can use this command!"))
             return true
         }
 
         if (!sender.hasPermission("sakura.setspawn")) {
-            sender.sendMessage(Component.text("You don't have permission to use this command!")
-                .color(TextColor.color(0xFF69B4)))
+            sender.sendMessage(ShadowUtils.parseMessage("<red>You don't have permission to use this command!"))
             return true
         }
 
         SpawnManager.setSpawn(sender.location)
-        sender.sendMessage(Component.text("Spawn location has been set!")
-            .color(TextColor.color(0xFF69B4)))
+        sender.sendMessage(ShadowUtils.parseMessage("<green>Spawn location has been set!"))
+        ShadowUtils.playSound(sender, Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1.5f)
 
         return true
     }

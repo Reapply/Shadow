@@ -2,11 +2,10 @@ package com.shadow.listeners
 
 import com.shadow.Shadow
 import com.shadow.features.spawn.SpawnManager
-import gg.flyte.twilight.event.event
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.TextColor
-import net.kyori.adventure.text.format.TextDecoration
+import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.GameMode
+import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.FoodLevelChangeEvent
@@ -14,87 +13,77 @@ import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerRespawnEvent
 
+/**
+ * Handles player-related events for the hub server
+ */
 class PlayerListener : Listener {
     private companion object {
-        val PINK = TextColor.color(0xFF69B4)
-        val LIGHT_PINK = TextColor.color(0xFFB6C1)
         const val SPAWN_TELEPORT_DELAY = 20L // 1 second delay
         const val SEPARATOR_LENGTH = 30
+
     }
 
-    private val welcomeMessage: List<Component> by lazy {
-        buildList {
-            add(Component.empty())
-            add(
-                Component.text()
-                    .append(
-                        Component.text("Welcome to Sakura PvP")
-                            .color(PINK)
-                            .decorate(TextDecoration.BOLD)
-                    )
-                    .build()
-            )
-            add(
-                Component.text()
-                    .append(
-                        Component.text("━".repeat(SEPARATOR_LENGTH))
-                            .color(LIGHT_PINK)
-                    )
-                    .decoration(TextDecoration.STRIKETHROUGH, true)
-                    .build()
-            )
-            add(Component.empty())
+    private val mm = MiniMessage.miniMessage()
+
+    private val welcomeMessage by lazy {
+        listOf(
+            "",
+            "<bold><gold>● WELCOME TO ABSIDIEN NETWORK ●</gold></bold>",
+            "<bold><white>━━━━━━━━━━━━━━━━━━━━━━━</white></bold>",
+            "<white>The home of PvP</white>",
+            ""
+        ).map { mm.deserialize(it) }
+    }
+
+    /**
+     * Join event
+     */
+    @EventHandler
+    fun onPlayerJoin(event: PlayerJoinEvent) {
+        event.joinMessage(null) // Remove default join message
+        Shadow.instance.setPlayerHubState(event.player)
+        scheduleSpawnTeleport(event.player)
+        sendWelcomeMessage(event.player)
+    }
+
+    /**
+     * Disable item dropping for non-creative players
+     */
+    @EventHandler
+    fun onPlayerDropItem(event: PlayerDropItemEvent) {
+        if (event.player.gameMode != GameMode.CREATIVE) {
+            event.isCancelled = true
         }
     }
 
-    init {
-        registerEvents()
+    /**
+     * Reset player state on respawn
+     */
+    @EventHandler
+    fun onPlayerRespawn(event: PlayerRespawnEvent) {
+        Shadow.instance.setPlayerHubState(event.player)
     }
 
-    private fun registerEvents() {
-        registerJoinEvent()
-        registerDropEvent()
-        registerRespawnEvent()
-        registerDamageEvent()
-        registerHungerEvent()
+    /**
+     * Disable all damage
+     */
+    @EventHandler
+    fun onEntityDamage(event: EntityDamageEvent) {
+        event.isCancelled = true
     }
 
-    private fun registerJoinEvent() {
-        event<PlayerJoinEvent> {
-            joinMessage(null) // Remove default join message
-            Shadow.instance.setPlayerHubState(player)
-            scheduleSpawnTeleport(player)
-            sendWelcomeMessage(player)
-        }
+    /**
+     * Disable hunger
+     */
+    @EventHandler
+    fun onFoodLevelChange(event: FoodLevelChangeEvent) {
+        event.isCancelled = true
     }
 
-    private fun registerDropEvent() {
-        event<PlayerDropItemEvent> {
-            if (player.gameMode != GameMode.CREATIVE) {
-                isCancelled = true
-            }
-        }
-    }
-
-    private fun registerRespawnEvent() {
-        event<PlayerRespawnEvent> {
-            Shadow.instance.setPlayerHubState(player)
-        }
-    }
-
-    private fun registerDamageEvent() {
-        event<EntityDamageEvent> {
-            isCancelled = true
-        }
-    }
-
-    private fun registerHungerEvent() {
-        event<FoodLevelChangeEvent> {
-            isCancelled = true
-        }
-    }
-
-    private fun scheduleSpawnTeleport(player: org.bukkit.entity.Player) {
+    /**
+     * Schedule teleport to spawn with a slight delay
+     */
+    private fun scheduleSpawnTeleport(player: Player) {
         Shadow.instance.server.scheduler.runTaskLater(
             Shadow.instance,
             Runnable { SpawnManager.teleportToSpawn(player) },
@@ -102,7 +91,10 @@ class PlayerListener : Listener {
         )
     }
 
-    private fun sendWelcomeMessage(player: org.bukkit.entity.Player) {
+    /**
+     * Send welcome message to player
+     */
+    private fun sendWelcomeMessage(player: Player) {
         welcomeMessage.forEach(player::sendMessage)
     }
 }

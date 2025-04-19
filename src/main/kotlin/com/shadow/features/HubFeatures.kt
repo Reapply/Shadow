@@ -1,18 +1,23 @@
 package com.shadow.features
 
-import gg.flyte.twilight.event.event
+import com.shadow.Shadow
+import com.shadow.utils.ShadowUtils
 import org.bukkit.Material
 import org.bukkit.Particle
 import org.bukkit.Sound
 import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
-import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.util.Vector
 import java.util.*
 
-object LaunchPad {
+/**
+ * Launch pad feature that propels players when they step on pressure plates
+ */
+object LaunchPad : Listener {
     private data class PadProperties(
         val multiplier: Double,
         val verticalBoost: Double,
@@ -47,27 +52,39 @@ object LaunchPad {
 
     private val launchCooldown = mutableMapOf<UUID, Long>()
 
+    /**
+     * Initialize the launch pad feature
+     */
     fun init() {
-        event<PlayerInteractEvent> {
-            // Check if player stepped on a pressure plate
-            if (action != Action.PHYSICAL) return@event
-
-            val player = player
-            val currentTime = System.currentTimeMillis()
-
-            // Get pad properties or return if not a launch pad
-            val padProps = launchPadTypes[clickedBlock?.type] ?: return@event
-
-            // Check cooldown
-            if (launchCooldown[player.uniqueId]?.let { currentTime - it < padProps.cooldown } == true) {
-                return@event
-            }
-
-            launchPlayer(player, padProps)
-            launchCooldown[player.uniqueId] = currentTime
-        }
+        Shadow.instance.server.pluginManager.registerEvents(this, Shadow.instance)
     }
 
+    /**
+     * Handle player stepping on pressure plates
+     */
+    @EventHandler
+    fun onPlayerInteract(event: PlayerInteractEvent) {
+        // Check if player stepped on a pressure plate
+        if (event.action != Action.PHYSICAL) return
+
+        val player = event.player
+        val currentTime = System.currentTimeMillis()
+
+        // Get pad properties or return if not a launch pad
+        val padProps = launchPadTypes[event.clickedBlock?.type] ?: return
+
+        // Check cooldown
+        if (launchCooldown[player.uniqueId]?.let { currentTime - it < padProps.cooldown } == true) {
+            return
+        }
+
+        launchPlayer(player, padProps)
+        launchCooldown[player.uniqueId] = currentTime
+    }
+
+    /**
+     * Launch a player with the given pad properties
+     */
     private fun launchPlayer(player: Player, props: PadProperties) {
         val direction = player.location.direction.normalize()
 
@@ -99,21 +116,28 @@ object LaunchPad {
             0.15 // speed
         )
 
-        player.playSound(
-            player.location,
-            props.sound,
-            1.0f,
-            1.0f
-        )
+        ShadowUtils.playSound(player, props.sound)
     }
 }
-object WorldProtection {
+
+/**
+ * Handles world protection features for the hub server
+ */
+object WorldProtection : Listener {
+    /**
+     * Initialize world protection
+     */
     fun init() {
-        // Prevent PvP
-        event<EntityDamageByEntityEvent> {
-            if (damager is Player && entity is Player) {
-                isCancelled = true
-            }
+        Shadow.instance.server.pluginManager.registerEvents(this, Shadow.instance)
+    }
+
+    /**
+     * Prevent PvP
+     */
+    @EventHandler
+    fun onEntityDamage(event: EntityDamageByEntityEvent) {
+        if (event.damager is Player && event.entity is Player) {
+            event.isCancelled = true
         }
     }
 }
