@@ -1,38 +1,39 @@
 package com.shadow.listeners
 
 import com.shadow.Shadow
+import com.shadow.config.ConfigManager
 import com.shadow.features.spawn.SpawnManager
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.GameMode
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
+import org.bukkit.event.block.LeavesDecayEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.FoodLevelChangeEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerJoinEvent
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerRespawnEvent
+import org.bukkit.event.weather.LightningStrikeEvent
 
 /**
  * Handles player-related events for the hub server
  */
 class PlayerListener : Listener {
     private companion object {
-        const val SPAWN_TELEPORT_DELAY = 20L // 1 second delay
         const val SEPARATOR_LENGTH = 30
-
     }
 
     private val mm = MiniMessage.miniMessage()
 
     private val welcomeMessage by lazy {
-        listOf(
-            "",
-            "<bold><gold>● WELCOME TO ABSIDIEN NETWORK ●</gold></bold>",
-            "<bold><white>━━━━━━━━━━━━━━━━━━━━━━━</white></bold>",
-            "<white>The home of PvP</white>",
-            ""
-        ).map { mm.deserialize(it) }
+        Shadow.instance.config.getStringList("player.welcome-message")
+            .map { mm.deserialize(it) }
+    }
+
+    private val spawnTeleportDelay by lazy {
+        Shadow.instance.config.getLong("player.spawn-teleport-delay", 20L)
     }
 
     /**
@@ -44,6 +45,26 @@ class PlayerListener : Listener {
         Shadow.instance.setPlayerHubState(event.player)
         scheduleSpawnTeleport(event.player)
         sendWelcomeMessage(event.player)
+    }
+
+    @EventHandler
+    fun onPlayerLeave(event: PlayerQuitEvent) {
+        event.quitMessage(null)
+    }
+
+    @EventHandler
+    fun onLeafDecay(event: LeavesDecayEvent) {
+        // Cancel leaf decay
+        event.isCancelled = true
+    }
+
+    @EventHandler
+    fun onLightingStrike(event: LightningStrikeEvent)
+    {
+        // Cancel lightning strikes in the hub world
+        if (event.world.name == ConfigManager.getHubWorldName()) {
+            event.isCancelled = true
+        }
     }
 
     /**
@@ -87,7 +108,7 @@ class PlayerListener : Listener {
         Shadow.instance.server.scheduler.runTaskLater(
             Shadow.instance,
             Runnable { SpawnManager.teleportToSpawn(player) },
-            SPAWN_TELEPORT_DELAY
+            spawnTeleportDelay
         )
     }
 

@@ -5,6 +5,7 @@ import com.shadow.utils.ShadowUtils
 import org.bukkit.Material
 import org.bukkit.Particle
 import org.bukkit.Sound
+import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
@@ -26,37 +27,110 @@ object LaunchPad : Listener {
         val sound: Sound
     )
 
-    private val launchPadTypes = mapOf(
-        Material.STONE_PRESSURE_PLATE to PadProperties(
+    private val launchPadTypes = mutableMapOf<Material, PadProperties>()
+    private val launchCooldown = mutableMapOf<UUID, Long>()
+    private var enabled = true
+
+    /**
+     * Initialize the launch pad feature
+     */
+    fun init() {
+        loadConfig()
+
+        if (enabled) {
+            Shadow.instance.server.pluginManager.registerEvents(this, Shadow.instance)
+            Shadow.instance.logger.info("Launch pads enabled with ${launchPadTypes.size} pad types")
+        } else {
+            Shadow.instance.logger.info("Launch pads are disabled in config")
+        }
+    }
+
+    /**
+     * Load launch pad configuration from config.yml
+     */
+    private fun loadConfig() {
+        val config = Shadow.instance.config
+
+        // Check if launch pads are enabled
+        enabled = config.getBoolean("launch-pads.enabled", true)
+        if (!enabled) return
+
+        // Load each launch pad type
+        val launchPadsSection = config.getConfigurationSection("launch-pads") ?: return
+
+        // Skip the "enabled" key and process only pad configurations
+        launchPadsSection.getKeys(false)
+            .filter { it != "enabled" }
+            .forEach { padKey ->
+                val padSection = launchPadsSection.getConfigurationSection(padKey) ?: return@forEach
+                loadPadType(padSection)
+            }
+
+        // If no pads were loaded, use defaults
+        if (launchPadTypes.isEmpty()) {
+            loadDefaultPads()
+        }
+    }
+
+    /**
+     * Load a single pad type from configuration
+     */
+    private fun loadPadType(config: ConfigurationSection) {
+        try {
+            val materialName = config.getString("material") ?: return
+            val material = Material.valueOf(materialName)
+
+            val padProperties = PadProperties(
+                multiplier = config.getDouble("multiplier", 2.0),
+                verticalBoost = config.getDouble("vertical-boost", 0.8),
+                cooldown = config.getLong("cooldown", 1000L),
+                particle = try {
+                    Particle.valueOf(config.getString("particle", "CLOUD")!!)
+                } catch (e: Exception) {
+                    Shadow.instance.logger.warning("Invalid particle type: ${config.getString("particle")}. Using CLOUD.")
+                    Particle.CLOUD
+                },
+                sound = try {
+                    Sound.valueOf(config.getString("sound", "BLOCK_IRON_TRAPDOOR_OPEN")!!)
+                } catch (e: Exception) {
+                    Shadow.instance.logger.warning("Invalid sound: ${config.getString("sound")}. Using BLOCK_IRON_TRAPDOOR_OPEN.")
+                    Sound.BLOCK_IRON_TRAPDOOR_OPEN
+                }
+            )
+
+            launchPadTypes[material] = padProperties
+        } catch (e: Exception) {
+            Shadow.instance.logger.warning("Error loading launch pad configuration: ${e.message}")
+        }
+    }
+
+    /**
+     * Load default pad configurations if none were loaded from config
+     */
+    private fun loadDefaultPads() {
+        launchPadTypes[Material.STONE_PRESSURE_PLATE] = PadProperties(
             multiplier = 2.0,
             verticalBoost = 0.8,
             cooldown = 1000L,
             particle = Particle.CLOUD,
             sound = Sound.BLOCK_IRON_TRAPDOOR_OPEN
-        ),
-        Material.HEAVY_WEIGHTED_PRESSURE_PLATE to PadProperties(
+        )
+
+        launchPadTypes[Material.HEAVY_WEIGHTED_PRESSURE_PLATE] = PadProperties(
             multiplier = 3.0,
             verticalBoost = 1.2,
             cooldown = 1500L,
             particle = Particle.FIREWORK,
             sound = Sound.ENTITY_FIREWORK_ROCKET_LAUNCH
-        ),
-        Material.LIGHT_WEIGHTED_PRESSURE_PLATE to PadProperties(
+        )
+
+        launchPadTypes[Material.LIGHT_WEIGHTED_PRESSURE_PLATE] = PadProperties(
             multiplier = 4.0,
             verticalBoost = 1.5,
             cooldown = 2000L,
             particle = Particle.TOTEM_OF_UNDYING,
             sound = Sound.ENTITY_WITHER_SHOOT
         )
-    )
-
-    private val launchCooldown = mutableMapOf<UUID, Long>()
-
-    /**
-     * Initialize the launch pad feature
-     */
-    fun init() {
-        Shadow.instance.server.pluginManager.registerEvents(this, Shadow.instance)
     }
 
     /**

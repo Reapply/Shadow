@@ -1,7 +1,9 @@
 package com.shadow
 
-import com.shadow.commands.ReloadCommand
+import com.shadow.commands.ShadowCommand
+import com.shadow.commands.SpawnCommand
 import com.shadow.config.ConfigManager
+import com.shadow.features.EnderButtFeature
 import com.shadow.features.LaunchPad
 import com.shadow.features.WorldProtection
 import com.shadow.features.selector.QueueCommand
@@ -49,7 +51,14 @@ class Shadow : JavaPlugin(), Listener {
     private fun registerCommands() {
         getCommand("queue")?.setExecutor(QueueCommand())
         getCommand("setspawn")?.setExecutor(SetSpawnCommand())
-        getCommand("absidien")?.setExecutor(ReloadCommand())
+        getCommand("spawn")?.setExecutor(SpawnCommand())
+
+        // Register shadow command with both executor and tab completer
+        val shadowCommand = ShadowCommand()
+        getCommand("shadow")?.apply {
+            setExecutor(shadowCommand)
+            tabCompleter = shadowCommand
+        }
     }
 
     override fun onDisable() {
@@ -65,6 +74,7 @@ class Shadow : JavaPlugin(), Listener {
         ServerSelector.init(this)
         LaunchPad.init()
         WorldProtection.init()
+        EnderButtFeature.init()
     }
 
     private fun registerListeners() {
@@ -79,7 +89,7 @@ class Shadow : JavaPlugin(), Listener {
         val currentItem = event.currentItem ?: return
         val meta = currentItem.itemMeta ?: return
 
-        if (meta.hasCustomModelData() && meta.customModelData == 1001) {
+        if (meta.hasCustomModelData() && meta.customModelData == ConfigManager.selectorConfig.customModelData) {
             event.isCancelled = true
             player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
             ServerSelector.openSelector(player)
@@ -114,7 +124,7 @@ class Shadow : JavaPlugin(), Listener {
             exp = 0f
             level = 0
             inventory.clear()
-            setPlayerWeather(WeatherType.DOWNFALL)
+            setPlayerWeather(WeatherType.CLEAR)
             activePotionEffects.forEach { removePotionEffect(it.type) }
 
             // Teleport to spawn
@@ -122,6 +132,7 @@ class Shadow : JavaPlugin(), Listener {
 
             // Give items
             ServerSelector.giveSelectorItem(this)
+            EnderButtFeature.giveEnderButtItem(this)
         }
     }
 }

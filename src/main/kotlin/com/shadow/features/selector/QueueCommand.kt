@@ -71,7 +71,7 @@ class QueueCommand : CommandExecutor {
      * Handle the queue control commands (admin only)
      */
     private fun handleControlCommand(sender: CommandSender, args: Array<out String>) {
-        if (!sender.hasPermission("sakura.queue.admin")) {
+        if (!sender.hasPermission("shadow.queue.admin")) {
             sender.sendMessage(ShadowUtils.parseMessage("<red>You don't have permission to control queues!"))
             return
         }
@@ -118,14 +118,14 @@ class QueueCommand : CommandExecutor {
      */
     private fun sendUsage(sender: CommandSender) {
         val baseCommands = listOf(
-            "<yellow>Usage: /queue <join|leave>",
+            "<#9AABBD>Usage: /queue <join|leave>",
             "<gray>  join <server> - Join a server queue",
             "<gray>  leave - Leave current queue"
         )
 
-        val adminCommands = if (sender.hasPermission("sakura.queue.admin")) {
+        val adminCommands = if (sender.hasPermission("shadow.queue.admin")) {
             listOf(
-                "<yellow>Admin Commands:",
+                "<#9AABBD>Admin Commands:",
                 "<gray>  control disable <server> - Disable a queue",
                 "<gray>  control enable <server> - Enable a queue"
             )
@@ -155,7 +155,7 @@ class QueueTabCompleter : TabCompleter {
 
     private fun getFirstArgumentCompletions(sender: CommandSender, current: String): List<String> {
         val commands = mutableListOf("join", "leave")
-        if (sender.hasPermission("sakura.queue.admin")) {
+        if (sender.hasPermission("shadow.queue.admin")) {
             commands.add("control")
         }
         return commands.filter { it.startsWith(current.lowercase()) }
@@ -167,7 +167,7 @@ class QueueTabCompleter : TabCompleter {
         current: String
     ): List<String> = when (firstArg.lowercase()) {
         "join" -> ConfigManager.serverList.map { it.id }
-        "control" -> if (sender.hasPermission("sakura.queue.admin")) {
+        "control" -> if (sender.hasPermission("shadow.queue.admin")) {
             listOf("disable", "enable")
         } else emptyList()
         else -> emptyList()
@@ -180,7 +180,7 @@ class QueueTabCompleter : TabCompleter {
         current: String
     ): List<String> = when {
         firstArg.equals("control", ignoreCase = true) &&
-                sender.hasPermission("sakura.queue.admin") -> {
+                sender.hasPermission("shadow.queue.admin") -> {
             ConfigManager.serverList.map { it.id }
                 .filter { it.startsWith(current.lowercase()) }
         }

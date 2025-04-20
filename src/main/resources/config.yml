@@ -1,11 +1,12 @@
-# Sakura PvP Configuration
+# Shadow Hub Configuration
 # Server Selector Configuration
 selector:
   material: COMPASS
   name: "<dark_purple>Server Selector"
   slot: 4
+  custom-model-data: 1001
 gui:
-  title: "<dark_purple>Sakura Network"
+  title: "<dark_purple>Shadow Network"
   size: 27
   use-background: true
   background-material: BLACK_STAINED_GLASS_PANE
@@ -59,3 +60,51 @@ queue:
     locked: "<dark_purple>This queue is currently locked!"
   action-bar:
     format: "<dark_purple>In Queue: %server% | Position: %position%/%total% | Time: %time%"
+
+# Player Configuration
+player:
+  # Delay in ticks before teleporting to spawn (20 ticks = 1 second)
+  spawn-teleport-delay: 20
+  # Welcome message shown to players when they join
+  welcome-message:
+    - ""
+    - "<bold><gold>● WELCOME TO SHADOW NETWORK ●</gold></bold>"
+    - "<bold><white>━━━━━━━━━━━━━━━━━━━━━━━</white></bold>"
+    - "<white>The home of PvP</white>"
+    - ""
+
+# Launch Pad Configuration
+launch-pads:
+  enabled: true
+  # Stone pressure plate (basic)
+  stone:
+    material: STONE_PRESSURE_PLATE
+    multiplier: 2.0
+    vertical-boost: 0.8
+    cooldown: 1000
+    particle: CLOUD
+    sound: BLOCK_IRON_TRAPDOOR_OPEN
+  # Heavy weighted pressure plate (medium)
+  heavy:
+    material: HEAVY_WEIGHTED_PRESSURE_PLATE
+    multiplier: 3.0
+    vertical-boost: 1.2
+    cooldown: 1500
+    particle: FIREWORK
+    sound: ENTITY_FIREWORK_ROCKET_LAUNCH
+  # Light weighted pressure plate (strong)
+  light:
+    material: LIGHT_WEIGHTED_PRESSURE_PLATE
+    multiplier: 4.0
+    vertical-boost: 1.5
+    cooldown: 2000
+    particle: TOTEM_OF_UNDYING
+    sound: ENTITY_WITHER_SHOOT
+
+# EnderButt Configuration
+enderbutt:
+  enabled: true
+  name: "<#9AABBD>Ender Butt"
+  lore:
+    - "<gray>Throw to ride the ender pearl!"
+    - "<gray>Wheeeeeee!"

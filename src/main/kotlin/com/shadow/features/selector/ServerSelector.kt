@@ -51,7 +51,7 @@ object ServerSelector : Listener {
                 material = Material.COMPASS,
                 name = ShadowUtils.parseMessage("<dark_purple>Server Selector")
             ).apply {
-                customModelData = 1001
+                customModelData = ConfigManager.selectorConfig.customModelData
             }
         }
     }
@@ -98,7 +98,7 @@ object ServerSelector : Listener {
                 material = material,
                 name = ShadowUtils.parseMessage(ConfigManager.selectorConfig.name)
             ).apply {
-                customModelData = 1001
+                customModelData = ConfigManager.selectorConfig.customModelData
             }
         } catch (e: Exception) {
             Shadow.instance.logger.severe("Error in createSelectorItem: ${e.message}")
@@ -258,7 +258,7 @@ object ServerSelector : Listener {
             val meta = item.itemMeta
             if (meta != null) {
                 meta.displayName(ShadowUtils.parseMessage("<dark_purple>Server Selector"))
-                meta.setCustomModelData(1001)
+                meta.setCustomModelData(ConfigManager.selectorConfig.customModelData)
                 item.itemMeta = meta
             }
             player.inventory.setItem(ConfigManager.selectorConfig.slot, item)
@@ -328,7 +328,7 @@ object ServerSelector : Listener {
     @EventHandler
     fun onItemDrop(event: PlayerDropItemEvent) {
         val meta = event.itemDrop.itemStack.itemMeta
-        if (meta?.hasCustomModelData() == true && meta.customModelData == 1001) {
+        if (meta?.hasCustomModelData() == true && meta.customModelData == ConfigManager.selectorConfig.customModelData) {
             event.isCancelled = true
         }
     }
@@ -341,7 +341,7 @@ object ServerSelector : Listener {
         if (event.action == Action.RIGHT_CLICK_AIR ||
             event.action == Action.RIGHT_CLICK_BLOCK) {
             val meta = event.item?.itemMeta
-            if (meta?.hasCustomModelData() == true && meta.customModelData == 1001) {
+            if (meta?.hasCustomModelData() == true && meta.customModelData == ConfigManager.selectorConfig.customModelData) {
                 event.isCancelled = true
                 openSelector(event.player)
             }

@@ -57,6 +57,10 @@ object ConfigManager {
         loadConfigurations()
     }
 
+    fun getHubWorldName(): String? {
+        return mainConfig.getString("world", "world")
+    }
+
     /**
      * Load all configurations from files
      */

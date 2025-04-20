@@ -8,6 +8,10 @@ commands:
     description: Set the spawn location
     usage: /setspawn
 
+  spawn:
+    description: Teleport to the spawn location
+    usage: /spawn
+
   queue:
     description: Queue management command
     usage: |
@@ -16,16 +20,22 @@ commands:
       /queue control <disable|enable> <server> - Control queues
     aliases: [q]
 
-  absidien:
-    description: Admin commands for the Absidien plugin
-    usage: /absidien reload
-    aliases: [abs]
+  shadow:
+    description: Admin commands for the Shadow plugin
+    usage: |
+      /shadow info - Show plugin information
+      /shadow reload - Reload plugin configuration
+    aliases: [sh]
 
 permissions:
-  sakura.setspawn:
+  shadow.setspawn:
     description: Allows setting the spawn location
     default: op
 
-  sakura.queue.admin:
+  shadow.queue.admin:
     description: Allows controlling server queues
+    default: op
+
+  shadow.admin:
+    description: Allows access to Shadow plugin administration commands
     default: op

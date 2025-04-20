@@ -35,10 +35,11 @@ data class SelectorConfig(
     val material: String = "COMPASS",
     val name: String = "<dark_purple>Server Selector",
     val slot: Int = 4,
-    val guiTitle: String = "<dark_purple>Sakura Network",
+    val guiTitle: String = "<dark_purple>Shadow Network",
     val guiSize: Int = 27,
     val useBackground: Boolean = true,
-    val backgroundMaterial: String = "BLACK_STAINED_GLASS_PANE"
+    val backgroundMaterial: String = "BLACK_STAINED_GLASS_PANE",
+    val customModelData: Int = 1001
 ) {
     // Added validation to ensure valid GUI size
     init {
@@ -66,11 +67,12 @@ data class SelectorConfig(
                 material = config.getString("selector.material") ?: "COMPASS",
                 name = config.getString("selector.name") ?: "<dark_purple>Server Selector",
                 slot = config.getInt("selector.slot", 4),
-                guiTitle = config.getString("gui.title") ?: "<dark_purple>Sakura Network",
+                guiTitle = config.getString("gui.title") ?: "<dark_purple>Shadow Network",
                 guiSize = config.getInt("gui.size", 27),
                 useBackground = config.getBoolean("gui.use-background", true),
                 backgroundMaterial = config.getString("gui.background-material")
-                    ?: "BLACK_STAINED_GLASS_PANE"
+                    ?: "BLACK_STAINED_GLASS_PANE",
+                customModelData = config.getInt("selector.custom-model-data", 1001)
             )
     }
 }

@@ -76,7 +76,7 @@ class SetSpawnCommand : CommandExecutor {
             return true
         }
 
-        if (!sender.hasPermission("sakura.setspawn")) {
+        if (!sender.hasPermission("shadow.setspawn")) {
             sender.sendMessage(ShadowUtils.parseMessage("<red>You don't have permission to use this command!"))
             return true
         }
