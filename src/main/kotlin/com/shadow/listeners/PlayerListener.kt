@@ -11,111 +11,51 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.LeavesDecayEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.FoodLevelChangeEvent
-import org.bukkit.event.player.PlayerDropItemEvent
-import org.bukkit.event.player.PlayerJoinEvent
-import org.bukkit.event.player.PlayerQuitEvent
-import org.bukkit.event.player.PlayerRespawnEvent
+import org.bukkit.event.player.*
 import org.bukkit.event.weather.LightningStrikeEvent
 
-/**
- * Handles player-related events for the hub server
- */
 class PlayerListener : Listener {
-    private companion object {
-        const val SEPARATOR_LENGTH = 30
-    }
 
     private val mm = MiniMessage.miniMessage()
+    private val config = Shadow.instance.config
+    private val welcomeMessages = config.getStringList("player.welcome-message").map(mm::deserialize)
+    private val spawnTeleportDelay = config.getLong("player.spawn-teleport-delay", 20L)
 
-    private val welcomeMessage by lazy {
-        Shadow.instance.config.getStringList("player.welcome-message")
-            .map { mm.deserialize(it) }
+    @EventHandler fun onJoin(e: PlayerJoinEvent) {
+        e.joinMessage(null)
+        val player = e.player
+        Shadow.instance.setPlayerHubState(player)
+        Shadow.instance.server.scheduler.runTaskLater(Shadow.instance, Runnable {
+            SpawnManager.teleportToSpawn(player)
+            welcomeMessages.forEach(player::sendMessage)
+        }, 20L)
     }
 
-    private val spawnTeleportDelay by lazy {
-        Shadow.instance.config.getLong("player.spawn-teleport-delay", 20L)
+    @EventHandler fun onQuit(e: PlayerQuitEvent) {
+        e.quitMessage(null)
     }
 
-    /**
-     * Join event
-     */
-    @EventHandler
-    fun onPlayerJoin(event: PlayerJoinEvent) {
-        event.joinMessage(null) // Remove default join message
-        Shadow.instance.setPlayerHubState(event.player)
-        scheduleSpawnTeleport(event.player)
-        sendWelcomeMessage(event.player)
+    @EventHandler fun onLeafDecay(e: LeavesDecayEvent) {
+        e.isCancelled = true
     }
 
-    @EventHandler
-    fun onPlayerLeave(event: PlayerQuitEvent) {
-        event.quitMessage(null)
+    @EventHandler fun onLightning(e: LightningStrikeEvent) {
+        if (e.world.name == ConfigManager.getHubWorldName()) e.isCancelled = true
     }
 
-    @EventHandler
-    fun onLeafDecay(event: LeavesDecayEvent) {
-        // Cancel leaf decay
-        event.isCancelled = true
+    @EventHandler fun onDrop(e: PlayerDropItemEvent) {
+        if (e.player.gameMode != GameMode.CREATIVE) e.isCancelled = true
     }
 
-    @EventHandler
-    fun onLightingStrike(event: LightningStrikeEvent)
-    {
-        // Cancel lightning strikes in the hub world
-        if (event.world.name == ConfigManager.getHubWorldName()) {
-            event.isCancelled = true
-        }
+    @EventHandler fun onRespawn(e: PlayerRespawnEvent) {
+        Shadow.instance.setPlayerHubState(e.player)
     }
 
-    /**
-     * Disable item dropping for non-creative players
-     */
-    @EventHandler
-    fun onPlayerDropItem(event: PlayerDropItemEvent) {
-        if (event.player.gameMode != GameMode.CREATIVE) {
-            event.isCancelled = true
-        }
+    @EventHandler fun onDamage(e: EntityDamageEvent) {
+        e.isCancelled = true
     }
 
-    /**
-     * Reset player state on respawn
-     */
-    @EventHandler
-    fun onPlayerRespawn(event: PlayerRespawnEvent) {
-        Shadow.instance.setPlayerHubState(event.player)
-    }
-
-    /**
-     * Disable all damage
-     */
-    @EventHandler
-    fun onEntityDamage(event: EntityDamageEvent) {
-        event.isCancelled = true
-    }
-
-    /**
-     * Disable hunger
-     */
-    @EventHandler
-    fun onFoodLevelChange(event: FoodLevelChangeEvent) {
-        event.isCancelled = true
-    }
-
-    /**
-     * Schedule teleport to spawn with a slight delay
-     */
-    private fun scheduleSpawnTeleport(player: Player) {
-        Shadow.instance.server.scheduler.runTaskLater(
-            Shadow.instance,
-            Runnable { SpawnManager.teleportToSpawn(player) },
-            spawnTeleportDelay
-        )
-    }
-
-    /**
-     * Send welcome message to player
-     */
-    private fun sendWelcomeMessage(player: Player) {
-        welcomeMessage.forEach(player::sendMessage)
+    @EventHandler fun onHunger(e: FoodLevelChangeEvent) {
+        e.isCancelled = true
     }
 }
