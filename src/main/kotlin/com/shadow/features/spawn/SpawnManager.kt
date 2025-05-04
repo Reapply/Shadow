@@ -30,13 +30,12 @@ object SpawnManager : Listener {
     }
 
     /**
-     * Teleport to spawn on join
+     * Teleport to spawn on join is now handled by PlayerListener
+     * to prevent multiple teleports causing "invalid move packet error"
      */
     @EventHandler
     fun onPlayerJoin(event: PlayerJoinEvent) {
-        ConfigManager.getSpawnLocation()?.let { spawn ->
-            event.player.teleport(spawn)
-        }
+        // Teleport is now handled by PlayerListener with a delay
     }
 
     /**

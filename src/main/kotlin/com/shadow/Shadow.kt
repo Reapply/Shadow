@@ -127,9 +127,6 @@ class Shadow : JavaPlugin(), Listener {
             setPlayerWeather(WeatherType.CLEAR)
             activePotionEffects.forEach { removePotionEffect(it.type) }
 
-            // Teleport to spawn
-            ConfigManager.getSpawnLocation()?.let { teleport(it) }
-
             // Give items
             ServerSelector.giveSelectorItem(this)
             EnderButtFeature.giveEnderButtItem(this)
