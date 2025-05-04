@@ -1,11 +1,14 @@
 package com.shadow
 
+import com.shadow.commands.AutographCommand
 import com.shadow.commands.ShadowCommand
 import com.shadow.commands.SpawnCommand
 import com.shadow.config.ConfigManager
 import com.shadow.features.EnderButtFeature
 import com.shadow.features.LaunchPad
 import com.shadow.features.WorldProtection
+import com.shadow.features.autograph.AutographBook
+
 import com.shadow.features.selector.QueueCommand
 import com.shadow.features.selector.ServerSelector
 import com.shadow.features.spawn.SetSpawnCommand
@@ -59,6 +62,13 @@ class Shadow : JavaPlugin(), Listener {
             setExecutor(shadowCommand)
             tabCompleter = shadowCommand
         }
+
+        // Register autograph command with both executor and tab completer
+        val autographCommand = AutographCommand()
+        getCommand("autograph")?.apply {
+            setExecutor(autographCommand)
+            tabCompleter = autographCommand
+        }
     }
 
     override fun onDisable() {
@@ -75,6 +85,7 @@ class Shadow : JavaPlugin(), Listener {
         LaunchPad.init()
         WorldProtection.init()
         EnderButtFeature.init()
+        AutographBook.init()
     }
 
     private fun registerListeners() {
@@ -130,6 +141,7 @@ class Shadow : JavaPlugin(), Listener {
             // Give items
             ServerSelector.giveSelectorItem(this)
             EnderButtFeature.giveEnderButtItem(this)
+            AutographBook.giveAutographBookItem(this)
         }
     }
 }

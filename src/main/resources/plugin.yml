@@ -27,6 +27,23 @@ commands:
       /shadow reload - Reload plugin configuration
     aliases: [sh]
 
+  cosmetics:
+    description: Manage your cosmetic items
+    usage: |
+      /cosmetics hat <hat-id> - Equip a hat
+      /cosmetics clear - Remove all cosmetics
+      /cosmetics list - List available cosmetics
+      /cosmetics help - Show help message
+    aliases: [cos]
+
+  autograph:
+    description: Manage autograph requests
+    usage: |
+      /autograph accept - Accept an autograph request
+      /autograph decline - Decline an autograph request
+      /autograph request <player> - Request an autograph from a player
+    aliases: [auto]
+
 permissions:
   shadow.setspawn:
     description: Allows setting the spawn location
@@ -39,3 +56,7 @@ permissions:
   shadow.admin:
     description: Allows access to Shadow plugin administration commands
     default: op
+
+  shadow.cosmetics:
+    description: Allows access to cosmetic items
+    default: true

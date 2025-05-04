@@ -64,7 +64,8 @@ queue:
 # Player Configuration
 player:
   # Delay in ticks before teleporting to spawn (20 ticks = 1 second)
-  spawn-teleport-delay: 20
+  # Increased to 40 ticks (2 seconds) to prevent "movement packet invalid" errors
+  spawn-teleport-delay: 40
   # Welcome message shown to players when they join
   welcome-message:
     - ""
@@ -108,3 +109,17 @@ enderbutt:
   lore:
     - "<gray>Throw to ride the ender pearl!"
     - "<gray>Wheeeeeee!"
+
+# Autograph Book Configuration
+autographbook:
+  enabled: true
+  name: "<gold>Autograph Book"
+  lore:
+    - "<gray>Collect autographs from other players!"
+    - "<gray>Right-click to view your collection."
+    - "<gray>Left-click a player to request their autograph."
+  gui:
+    title: "<gold>Autograph Collection"
+    size: 54
+    background-material: BLACK_STAINED_GLASS_PANE
+    header-material: WRITABLE_BOOK

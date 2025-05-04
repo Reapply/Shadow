@@ -28,7 +28,7 @@ class PlayerListener : Listener {
         Shadow.instance.server.scheduler.runTaskLater(Shadow.instance, Runnable {
             SpawnManager.teleportToSpawn(player)
             welcomeMessages.forEach(player::sendMessage)
-        }, 20L)
+        }, spawnTeleportDelay)
     }
 
     @EventHandler fun onQuit(e: PlayerQuitEvent) {
